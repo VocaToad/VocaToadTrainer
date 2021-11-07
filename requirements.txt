@@ -1,0 +1,6 @@
+pandas
+librosa
+matplotlib
+sklearn
+tensorflow
+audioread
