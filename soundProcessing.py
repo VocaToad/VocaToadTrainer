@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import librosa
 import librosa.display
+import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -15,9 +16,11 @@ class IndividualSound():
     def __init__(self,filename,baseLength=None):
         self.filename = filename
         self.baseLength = baseLength
+        self.sr = None
+        self.extractSoundFeatures()
 
-    def getSoundFeatures(self):
-        y, sr = librosa.load(self.filename,sr=28000)
+    def extractSoundFeatures(self):
+        y, self.sr = librosa.load(self.filename,sr=28000)
         data = np.array([padding(librosa.feature.mfcc(y, n_fft=n_fft,hop_length=hop_length,n_mfcc=128),1,1000)])
         print ("data len: "+str(len(data[0])))
         fixedData = [[]]
@@ -28,9 +31,25 @@ class IndividualSound():
             for i in data[0]:
                 fixedData[0].append(i[0:self.baseLength])
             print("After Fixing:\n Length: "+str(len(fixedData[0])) + " \n length Internal: "+ str(len(fixedData[0][0])))
-            return fixedData, self.baseLength
+            self.features = fixedData
         else:
-            return data, self.baseLength
+            self.features = data
+    
+    def getSoundFeatures(self):
+        return self.features, self.baseLength
+
+    def Waveplot(self):
+        y,sr=librosa.load(self.filename)
+        librosa.display.waveplot(y,sr=sr, x_axis='time', color='purple',offset=0.0)
+
+    def Plot(self):
+        fig, ax = plt.subplots(figsize=(20,7))
+        librosa.display.specshow(self.features,sr=self.sr, cmap='cool',hop_length=hop_length)
+        ax.set_xlabel('Time', fontsize=15)
+        ax.set_title('MFCC', size=20)
+        plt.colorbar()
+        plt.show()
+
 
 class SoundProcessing:
     def __init__(self):
