@@ -1,8 +1,7 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+from datetime import datetime
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import normalize
 import warnings
 warnings.filterwarnings('ignore')
 from sklearn.model_selection import train_test_split
@@ -12,48 +11,39 @@ from tensorflow.keras.layers import LSTM, Dense, Dropout
 from keras.callbacks import ModelCheckpoint
 
 from paths import *
-from soundProcessing import SoundProcessing, IndividualSound
-
-class VocatoadTrainingData():
-    def __init__(self):
-        if audioDataFile.exists():
-            self.audiodata = np.load(audioDataFile)
-        else:
-            self.__ProcessAudios()
-
-    def __ProcessAudios(self):
-        soundProcessor = SoundProcessing()
-        soundProcessor.ProcessSound()
-        self.audiodata = soundProcessor.audiodata
-    
-    def GetTrainingData(self):
-        X = self.audiodata["soundarray"]
-        X = np.array((X-np.min(X))/(np.max(X)-np.min(X)))
-        X = X/np.std(X)
-        y = self.audiodata["speciesarray"]
-        print(len(X))
-        print(len(y))
-        print("X e Y definidos")
-        
-
-        #Split twice to get the validation set
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=123)
-        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25, random_state=123)
-        #Print the shapes
-        print(str(X_train.shape), str(X_test.shape), str(X_val.shape), str(len(y_train)), str(len(y_test)), str(len(y_val)))
-        print("Conjuntos definidos")
-
-        return X_train, X_test, X_val, y_train, y_test, y_val
+from vocatoadTrainingData import VocatoadTrainingData
+from soundProcessing import IndividualSound
 
 
 class VocatoadRNN():
+    history = None
+
     def __init__(self):
+        self.modelFile = savedModelsPath.joinpath(type(self).__name__).absolute()
+        self.savePath = speciesModelWeightsFile
+        self.historyFile = speciesModelPath.joinpath("history").absolute()
+        self.labels = None
+        self.loss = "loss"
+        self.accuracy = "acc"
+        self.validationLoss = "val_loss"
+        self.validationAccuracy = "val_acc"
         self.DefineRNN()
         self.ReloadModel()
 
     def ReloadModel(self):
-        if modelWeightsFile.exists():
-            self.model.load_weights(modelWeightsFile)
+        if self.modelFile.exists():
+            print("Reloading Model at "+str(self.modelFile))
+            self.model = keras.models.load_model(self.modelFile)
+            return
+        if self.savePath.exists():
+            print("Reloading Model at "+str(self.savePath))
+            self.model.load_weights(self.savePath)
+            self.CompileModel()
+    
+    def CompileModel(self):
+        self.model.compile(optimizer='adam',loss='SparseCategoricalCrossentropy',metrics=['acc'])
+        self.model.summary()
+
 
     def DefineRNN(self):
         input_shape=(128,1000)
@@ -65,25 +55,33 @@ class VocatoadRNN():
         model.add(Dense(800, activation='softmax'))
         model.summary()
 
-        model.compile(optimizer='adam',loss='SparseCategoricalCrossentropy',metrics=['acc'])
-
         self.model = model
 
-    def Train(self):
-        X_train, X_test, X_val, y_train, y_test, y_val = VocatoadTrainingData().GetTrainingData()
+        self.CompileModel()
+       
+
+    def Train(self, trainingData=None,labels=None):
+        if not labels:
+            labels = self.labels
+        if not trainingData:
+            trainingData = VocatoadTrainingData(labels)
+        X_train, X_test, X_val, y_train, y_test, y_val = trainingData.GetTrainingData()
 
         # define the checkpoint
-        cp1= ModelCheckpoint(filepath=modelWeightsFile, save_weights_only=True, monitor='loss', save_best_only=True, verbose=1, mode='min')
+        cp1= ModelCheckpoint(filepath=self.savePath, save_weights_only=False, monitor='loss', save_best_only=True, verbose=1, mode='min')
         callbacks_list = [cp1]
 
-        history = self.model.fit(X_train, y_train, epochs=200, batch_size=72, 
+        self.history = self.model.fit(X_train, y_train, epochs=50, batch_size=72, 
                     validation_data=(X_val, y_val), shuffle=False, callbacks=callbacks_list)
 
-        history_dict=history.history
-        loss_values=history_dict['loss']
-        acc_values=history_dict['acc']
-        val_loss_values = history_dict['val_loss']
-        val_acc_values=history_dict['val_acc']
+        self.SaveHistory()
+        self.SaveModel()
+
+        history_dict=self.history.history
+        loss_values=history_dict[self.loss]
+        acc_values=history_dict[self.accuracy]
+        val_loss_values = history_dict[self.validationLoss]
+        val_acc_values=history_dict[self.validationAccuracy]
         epochs=range(1,51)
         fig,(ax1,ax2)=plt.subplots(1,2,figsize=(15,5))
         ax1.plot(epochs,loss_values,'co',label='Training Loss')
@@ -106,7 +104,7 @@ class VocatoadRNN():
         print('Confusion_matrix: ',tf.math.confusion_matrix(y_test, np.argmax(y_pred,axis=1)))
     
     def Predict(self,sounds=[]):
-        if not sounds:
+        if not len(sounds):
             return None
         return self.model.predict(sounds)
     
@@ -122,6 +120,14 @@ class VocatoadRNN():
         features.append(data)
         return self.Predict(np.concatenate(features,axis=0))
 
+    def SaveHistory(self): 
+        hist_json_file = str(self.historyFile)+datetime.now().strftime("%d-%m-%Y-%H-%M-%S")+".json"   
+        hist_df = pd.DataFrame(self.history.history) 
+        with open(hist_json_file, mode='w') as f:
+            hist_df.to_json(f)
+
+    def SaveModel(self):
+        self.model.save(self.modelFile)
 
 
 if __name__ == "__main__":

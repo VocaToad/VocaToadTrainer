@@ -10,6 +10,8 @@ class csvPopulator:
         self.__loadConfigFile()
         self.recordings = []
         self.species = []
+        self.families = []
+        self.genders = []
         self.speciesNextId = 0
         
         
@@ -78,9 +80,35 @@ class csvPopulator:
         except:
             logging.exception('')
             return None
+    
+    def __FamilyExist(self, recordingData):
+        try:
+            for family in self.families:
+                if family["family"] == recordingData["family"]:
+                    return family
+            return None
+        except:
+            logging.exception('')
+            return None
+    
+    def __GenderExist(self, recordingData):
+        try:
+            for gender in self.genders:
+                if gender["gender"] == recordingData["gender"]:
+                    return gender
+            return None
+        except:
+            logging.exception('')
+            return None
 
     def __AddSpecies(self,recordingData):
         try:
+            if not self.__FamilyExist(recordingData):
+                if not self.__AddFamily(recordingData):
+                    return False
+            if not self.__GenderExist(recordingData):
+                if not self.__AddGender(recordingData):
+                    return False
             self.species.append({"id": self.speciesNextId,\
                 "class": recordingData["class"],\
                 "family": recordingData["family"],\
@@ -91,6 +119,34 @@ class csvPopulator:
             return True
         except:
             logging.critical("Unable to Create Species: "+recordingData["gender"]+" "+recordingData["species"])
+            logging.exception('')
+            return False
+
+    def __AddFamily(self,recordingData):
+        try:
+            self.families.append(
+                {
+                "id": len(self.families),
+                "family": recordingData["family"]
+                }
+                )
+            return True
+        except:
+            logging.critical("Unable to Create Family: "+recordingData["family"])
+            logging.exception('')
+            return False
+
+    def __AddGender(self,recordingData):
+        try:
+            self.genders.append(
+                {
+                    "id": len(self.genders),\
+                        "gender": recordingData["gender"]
+                        }
+                        )
+            return True
+        except:
+            logging.critical("Unable to Create Gender: "+recordingData["gender"])
             logging.exception('')
             return False
         
@@ -107,20 +163,26 @@ class csvPopulator:
     def __AddRecording(self,recordingData):
         try:
             animal = self.__SpeciesExist(recordingData)
+            family = self.__FamilyExist(recordingData)
+            gender = self.__GenderExist(recordingData)
             self.recordings.append({
                 "id": recordingData["number"],
+                "family": family["id"],
+                "gender": gender["id"],
                 "species": animal["id"],
                 "audio": self.fnjvAnuraFilePath.joinpath(recordingData["individualData"]["audio"]["audio"]["file"].split("/")[-1]).absolute()
             })
             return True
         except:
-            logging.critical("Unable to Create Recording: "+recordingData["number"])
+            logging.critical("Unable to Create Recording: "+recordingData["number"]+" "+recordingData["family"]+" "+recordingData["gender"]+" "+recordingData["species"])
             logging.exception('')
             return False
     
     def CreateAnuraCsv(self):
         self.__PopulateFromFnjvAnuraFile()
         self.__CreateSpeciesCsv()
+        self.__CreateFamilyCsv()
+        self.__CreateGenderCsv()
         self.__CreateRecordingsCsv()
     
     def __CreateSpeciesCsv(self):
@@ -128,6 +190,18 @@ class csvPopulator:
             fc = csv.DictWriter(output_file, fieldnames=self.species[0].keys(),)
             fc.writeheader()
             fc.writerows(self.species)
+
+    def __CreateFamilyCsv(self):
+        with open(familiesFile, 'w', encoding='utf8', newline='') as output_file:
+            fc = csv.DictWriter(output_file, fieldnames=self.families[0].keys(),)
+            fc.writeheader()
+            fc.writerows(self.families)
+
+    def __CreateGenderCsv(self):
+        with open(gendersFile, 'w', encoding='utf8', newline='') as output_file:
+            fc = csv.DictWriter(output_file, fieldnames=self.genders[0].keys(),)
+            fc.writeheader()
+            fc.writerows(self.genders)
     
     def __CreateRecordingsCsv(self):
         with open(recordingsFile, 'w', encoding='utf8', newline='') as output_file:
