@@ -25,7 +25,6 @@ class ToadIdentifier:
             "specie": entry[4],
             "name": entry[5] if not "nan" else "",
             "certainty": "{:.2f}%".format(max_value*100)
-
         }
         
 
