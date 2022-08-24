@@ -2,6 +2,7 @@ import pathlib
 import pandas as pd
 import numpy as np
 from vocatoadSpeciesCNN import VocatoadSpeciesCNN
+from soundProcessing import IndividualSound
 
 import paths
 
@@ -11,8 +12,13 @@ class ToadIdentifier:
         self.speciesReference = pd.read_csv(paths.speciesFile)
         self.gendersReference = pd.read_csv(paths.gendersFile)
         self.familiesReference = pd.read_csv(paths.familiesFile)
-        
+
+    def GetSoundImages(self, audio, baseLength=None, outputFolder=None):
+        soundData = IndividualSound(audio, baseLength, outputFolder)
+        soundData.Plot()
+
     def IdentifyToadSpecieWithCNN(self, audio, baseLength=None, outputFolder=None):
+        self.GetSoundImages(audio, baseLength, outputFolder)
         prediction = VocatoadSpeciesCNN().IdentifySoundImage(audio, baseLength, outputFolder)
         max_value = prediction.max()
         index = np.where(prediction == max_value)[0]
