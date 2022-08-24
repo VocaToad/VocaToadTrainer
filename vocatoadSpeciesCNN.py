@@ -65,15 +65,15 @@ class VocatoadSpeciesCNN(VocatoadRNN):
 
         self.CompileModel()
     
-    def IdentifySoundImage(self,soundfile):
-        data, baseLength = IndividualSound(soundfile).getSoundImages()
-        return self.Predict(np.array([data]))
+    def IdentifySoundImage(self,soundfile, baseLength=None, outputFolder=None):
+        data, baseLength = IndividualSound(soundfile,baseLength,outputFolder).getSoundImages()
+        prediction = self.Predict(np.array([data]))
+        return prediction
 
-    def IdentifySoundImages(self,soundlist):
+    def IdentifySoundImages(self,soundlist, baseLength=None, outputFolder=None):
         features = []
-        baseLength = None
         for soundfile in soundlist:      
-            data, baseLength = IndividualSound(soundfile,baseLength).getSoundImages()
+            data, baseLength = IndividualSound(soundfile,baseLength,outputFolder).getSoundImages()
             features.append([data])
         return self.Predict(np.array(np.concatenate(features,axis=0)))
 

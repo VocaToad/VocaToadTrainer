@@ -1,3 +1,4 @@
+import pathlib
 import time
 import pandas as pd
 import numpy as np
@@ -16,10 +17,11 @@ n_fft = 255 #number of samples
 max_size = 1000
 
 class IndividualSound():
-    def __init__(self,filename,baseLength=None):
+    def __init__(self,filename,baseLength=None, outputFolder=None):
         self.filename = filename
         self.saveFile = outputPath.joinpath(self.filename.split("/")[-1].replace(".mp3",".npz")).absolute()
         self.baseLength = baseLength
+        self.outputFolder = pathlib.Path(outputFolder) if outputFolder else None
         self.sr = None
         self.features = None
         self.image = []
@@ -91,6 +93,8 @@ class IndividualSound():
         ax.set_title('Espectrograma de Mel (MFCC)', size=20)
         plt.colorbar().set_label('dB', rotation=270)
         plt.savefig(outputPath.joinpath(self.filename.split("/")[-1].replace(".mp3","-MFCC.png")).absolute())
+        if self.outputFolder:
+            plt.savefig(self.outputFolder.joinpath(self.filename.split("/")[-1].replace(".mp3","-MFCC.png")).absolute())
         time.sleep(0.5)
 
     def PlotSTFT(self):
@@ -103,6 +107,8 @@ class IndividualSound():
         ax.set_title('Transformada de Fourier de Curto Prazo (STFT)', size=20)
         plt.colorbar().set_label('dB', rotation=270)
         plt.savefig(outputPath.joinpath(self.filename.split("/")[-1].replace(".mp3","-STFT.png")).absolute())
+        if self.outputFolder:
+            plt.savefig(self.outputFolder.joinpath(self.filename.split("/")[-1].replace(".mp3","-STFT.png")).absolute())
         time.sleep(0.5)
 
     def PlotCentroid(self):
@@ -115,6 +121,8 @@ class IndividualSound():
         ax.set_xlabel('Tempo', fontsize=15)
         ax.set_title('Centróide Espectral (SC)', size=20)
         plt.savefig(outputPath.joinpath(self.filename.split("/")[-1].replace(".mp3","-SC.png")).absolute())
+        if self.outputFolder:
+            plt.savefig(self.outputFolder.joinpath(self.filename.split("/")[-1].replace(".mp3","-SC.png")).absolute())
         time.sleep(0.5)
     
     def PlotChromaSTFT(self):
@@ -126,6 +134,8 @@ class IndividualSound():
         ax.set_title('Cromagrama(Chroma-STFT)', size=20)
         plt.colorbar()
         plt.savefig(outputPath.joinpath(self.filename.split("/")[-1].replace(".mp3","-CSTFT.png")).absolute())
+        if self.outputFolder:
+            plt.savefig(self.outputFolder.joinpath(self.filename.split("/")[-1].replace(".mp3","-CSTFT.png")).absolute())
         time.sleep(0.5)
     
     def PlotSBW(self):
@@ -138,6 +148,9 @@ class IndividualSound():
         ax.set_xlabel('Tempo', fontsize=15)
         ax.set_title('Largura de Banda Espectral (SBW)', size=20)
         plt.savefig(outputPath.joinpath(self.filename.split("/")[-1].replace(".mp3","-SBW.png")).absolute())
+        print(self.outputFolder)
+        if self.outputFolder:
+            plt.savefig(self.outputFolder.joinpath(self.filename.split("/")[-1].replace(".mp3","-SBW.png")).absolute())
         time.sleep(0.5)
 
     def Plot(self):
