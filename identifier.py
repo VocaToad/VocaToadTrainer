@@ -37,7 +37,7 @@ class ToadIdentifier:
 
 if __name__ == "__main__":
     testFolder= pathlib.Path("Teste").absolute()
-    testFile = testFolder.joinpath("FNJV_0004575.mp3").absolute()
+    testFile = testFolder.joinpath("FNJV_0032775.mp3").absolute()
     print(str(testFile))
     identifier = ToadIdentifier()
     print(identifier.IdentifyToadSpecieWithCNN(str(testFile),None, str(testFolder)))
